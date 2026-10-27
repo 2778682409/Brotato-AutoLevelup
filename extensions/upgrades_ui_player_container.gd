@@ -6,6 +6,7 @@ var _mod_stat_buttons: Dictionary = {}
 var _mod_badges: Dictionary = {}
 var _mod_clear_button: Button = null
 var _mod_highlights: Array = []
+var _mod_font: Font = null # 缓存字体
 
 # ================= 倒计时与状态 =================
 var _mod_timer: Timer = null
@@ -39,7 +40,6 @@ func _load_preferences() -> void:
 	var config = ConfigFile.new()
 	if config.load(SAVE_PATH) == OK:
 		_mod_preferences = config.get_value(SAVE_SECTION, SAVE_KEY, [])
-		# 过滤掉可能已经失效的旧属性
 		var valid_prefs = []
 		for stat in _mod_preferences:
 			if stat in STAT_ORDER:
@@ -55,6 +55,11 @@ func _save_preferences() -> void:
 func _build_mod_panel() -> void:
 	if _mod_panel != null or _upgrades_container == null:
 		return
+		
+	# 加载原版字体（海克斯同款路径）
+	var font_path = "res://resources/fonts/actual/base/font_smallest_text.tres"
+	if ResourceLoader.exists(font_path):
+		_mod_font = load(font_path)
 	
 	_mod_timer = Timer.new()
 	_mod_timer.one_shot = true
@@ -81,11 +86,13 @@ func _build_mod_panel() -> void:
 	title.text = "自动选择属性"
 	title.valign = Label.VALIGN_CENTER
 	title.add_color_override("font_color", Color.white)
+	if _mod_font != null: title.add_font_override("font", _mod_font)
 	header.add_child(title)
 
 	_mod_clear_button = Button.new()
 	_mod_clear_button.text = "清空"
 	_mod_clear_button.rect_min_size = Vector2(80, 36)
+	if _mod_font != null: _mod_clear_button.add_font_override("font", _mod_font)
 	_mod_clear_button.connect("pressed", self, "_on_clear_pressed")
 	header.add_child(_mod_clear_button)
 
@@ -152,12 +159,9 @@ func _create_stat_toggle(stat: String) -> Button:
 	style.content_margin_bottom = 6
 	btn.add_stylebox_override("normal", style)
 	
-	# 放大主文字
-	var default_font = btn.get_font("font")
-	if default_font is DynamicFont:
-		var new_font = default_font.duplicate()
-		new_font.size = 20 
-		btn.add_font_override("font", new_font)
+	# 💥 直接应用原版字体
+	if _mod_font != null:
+		btn.add_font_override("font", _mod_font)
 	
 	# ================= 海克斯同款：精准对齐角标 =================
 	var badge = Label.new()
@@ -165,19 +169,16 @@ func _create_stat_toggle(stat: String) -> Button:
 	badge.anchor_right = 1.0
 	badge.anchor_top = 0.0
 	badge.anchor_bottom = 1.0
-	badge.margin_left = -30  # 给数字留出 30 宽度的位置
-	badge.margin_right = -8  # 距离最右边留 8 像素
-	badge.align = Label.ALIGN_RIGHT # 右对齐
-	badge.valign = Label.VALIGN_CENTER # 垂直居中 (核心修复)
+	badge.margin_left = -30  # 留出 30 像素给数字
+	badge.margin_right = -8  # 距离边缘 8 像素
+	badge.align = Label.ALIGN_CENTER # 在预留空间内居中
+	badge.valign = Label.VALIGN_CENTER # 垂直居中
 	badge.visible = false
 	
-	# 角标字体也放大到 20
-	if default_font is DynamicFont:
-		var badge_font = default_font.duplicate()
-		badge_font.size = 20
-		badge.add_font_override("font", badge_font)
+	# 💥 角标也用原版字体
+	if _mod_font != null:
+		badge.add_font_override("font", _mod_font)
 		
-	# 用金色让它更显眼（可选）
 	badge.add_color_override("font_color", Color(1.0, 0.8, 0.2)) 
 	
 	btn.add_child(badge)
@@ -186,14 +187,13 @@ func _create_stat_toggle(stat: String) -> Button:
 	btn.connect("toggled", self, "_on_stat_toggled", [stat])
 	return btn
 
-# 动态计算宽度时，加上角标的专属空间
+# 💥 动态计算时，直接用加载好的字体
 func _toggle_width(button: Button) -> float:
-	var font = button.get_font("font")
-	if font == null:
-		font = DynamicFont.new()
-		font.size = 16
-	var text_width = font.get_string_size(button.text).x
-	# 💥 加上图标的 34 + 角标的 30 + 左右边距的 24
+	var text_width = 0.0
+	if _mod_font != null:
+		text_width = _mod_font.get_string_size(button.text).x
+	else:
+		text_width = 100.0 # 兜底
 	return text_width + 34.0 + 30.0 + 24.0
 
 func show_upgrades_for_level(level: int) -> void:
@@ -221,14 +221,12 @@ func _on_stat_toggled(pressed: bool, stat: String) -> void:
 			_mod_preferences.append(stat)
 	else:
 		_mod_preferences.erase(stat)
-	# 每次点击都保存！
 	_save_preferences()
 	_sync_panel()
 	_schedule_auto_pick()
 
 func _on_clear_pressed() -> void:
 	_mod_preferences.clear()
-	# 清空也保存！
 	_save_preferences()
 	_sync_panel()
 	_schedule_auto_pick()
@@ -360,11 +358,3 @@ func _fit_toggle_grid(grid: GridContainer) -> void:
 	
 	for stat in _mod_stat_buttons:
 		_mod_stat_buttons[stat].rect_min_size = Vector2(widest, 40)
-
-func _toggle_width(button: Button) -> float:
-	var font = button.get_font("font")
-	if font == null:
-		font = DynamicFont.new()
-		font.size = 16
-	var text_width = font.get_string_size(button.text).x
-	return text_width + 34.0 + 30.0 + 24.0
