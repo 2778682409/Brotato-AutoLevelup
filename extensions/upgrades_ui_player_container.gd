@@ -1,5 +1,7 @@
 extends "res://ui/menus/ingame/upgrades_ui_player_container.gd"
-
+# 加载原版字体
+const FONT_PATH = "res://resources/fonts/actual/base/font_smallest_text.tres"
+var _ui_font = null
 # ================= 界面变量 =================
 var _mod_panel: VBoxContainer = null
 var _mod_stat_buttons: Dictionary = {}
@@ -30,6 +32,9 @@ func _ready() -> void:
 func _build_mod_panel() -> void:
 	if _mod_panel != null or _upgrades_container == null:
 		return
+		
+	#  加载字体资源
+	_ui_font = load(FONT_PATH) if ResourceLoader.exists(FONT_PATH) else null
 	
 	_mod_timer = Timer.new()
 	_mod_timer.one_shot = true
@@ -53,10 +58,13 @@ func _build_mod_panel() -> void:
 	_mod_panel.add_child(header)
 
 	var title = Label.new()
-	title.text = "自动选择属性"
-	title.valign = Label.VALIGN_CENTER
-	title.add_color_override("font_color", Color.white)
-	header.add_child(title)
+    title.text = "自动选择属性"
+    title.valign = Label.VALIGN_CENTER
+    title.add_color_override("font_color", Color.white)
+    # 给标题换上原版稍微大一点的字体
+    var title_font = load("res://resources/fonts/actual/base/font_26.tres")
+    if title_font != null:
+	    title.add_font_override("font", title_font)
 
 	_mod_clear_button = Button.new()
 	_mod_clear_button.text = "清空"
@@ -110,11 +118,18 @@ func _create_stat_toggle(stat: String) -> Button:
 	btn.toggle_mode = true
 	btn.text = TranslationServer.translate(stat.to_upper())
 	btn.icon = ItemService.get_stat_small_icon(Keys.generate_hash(stat))
-	btn.expand_icon = true
+	
+	#  关键1：让图标自动撑满高度
+	btn.expand_icon = true 
+	
+	#  关键2：强制使用原版字体
+	if _ui_font != null:
+		btn.add_font_override("font", _ui_font)
+	
 	btn.focus_mode = Control.FOCUS_ALL
 	
-	#  增加按钮的最小高度和宽度，让它看起来更大气
-	btn.rect_min_size = Vector2(180, 45) 
+	#  关键3：把高度从 45 加到 50，让原本被缩小的图标变大
+	btn.rect_min_size = Vector2(190, 50) 
 	
 	# 样式
 	var style = StyleBoxFlat.new()
@@ -123,7 +138,7 @@ func _create_stat_toggle(stat: String) -> Button:
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(8)
 	
-	#  核心：增加按钮内部的内边距，让它不挤
+	# 内部留白
 	style.content_margin_left = 16
 	style.content_margin_right = 16
 	style.content_margin_top = 10
@@ -138,6 +153,9 @@ func _create_stat_toggle(stat: String) -> Button:
 	badge.margin_right = -10
 	badge.align = Label.ALIGN_RIGHT
 	badge.visible = false
+	# 角标也用原版字体
+	if _ui_font != null:
+		badge.add_font_override("font", _ui_font)
 	btn.add_child(badge)
 	_mod_badges[stat] = badge
 
