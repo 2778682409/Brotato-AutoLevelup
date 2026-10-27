@@ -14,6 +14,11 @@ var _mod_candidate = null
 var _mod_syncing: bool = false
 var _mod_preferences: Array = [] 
 
+# ================= 永久保存配置 =================
+const SAVE_PATH = "user://auto_levelup_save.cfg"
+const SAVE_SECTION = "Preferences"
+const SAVE_KEY = "stats"
+
 # ================= 常量设置 =================
 const AUTO_PICK_DELAY = 2.0
 const AUTO_PICK_IDLE_DELAY = 2.0
@@ -25,8 +30,28 @@ const STAT_ORDER = [
 ]
 
 func _ready() -> void:
+	# 初始化时直接读取保存的配置
+	_load_preferences()
 	call_deferred("_build_mod_panel")
 
+# ================= 读写配置文件 =================
+func _load_preferences() -> void:
+	var config = ConfigFile.new()
+	if config.load(SAVE_PATH) == OK:
+		_mod_preferences = config.get_value(SAVE_SECTION, SAVE_KEY, [])
+		# 过滤掉可能已经失效的旧属性
+		var valid_prefs = []
+		for stat in _mod_preferences:
+			if stat in STAT_ORDER:
+				valid_prefs.append(stat)
+		_mod_preferences = valid_prefs
+
+func _save_preferences() -> void:
+	var config = ConfigFile.new()
+	config.set_value(SAVE_SECTION, SAVE_KEY, _mod_preferences)
+	config.save(SAVE_PATH)
+
+# ================= 界面生成 =================
 func _build_mod_panel() -> void:
 	if _mod_panel != null or _upgrades_container == null:
 		return
@@ -64,7 +89,6 @@ func _build_mod_panel() -> void:
 	_mod_clear_button.connect("pressed", self, "_on_clear_pressed")
 	header.add_child(_mod_clear_button)
 
-	# ================= 动态九宫格 =================
 	var grid = GridContainer.new()
 	grid.size_flags_horizontal = SIZE_SHRINK_CENTER
 	grid.add_constant_override("hseparation", 8)
@@ -77,7 +101,6 @@ func _build_mod_panel() -> void:
 		grid.add_child(btn)
 		_mod_stat_buttons[stat] = btn
 
-	# 💥 核心：动态计算列数和按钮宽度
 	_fit_toggle_grid(grid)
 
 	for upgrade_ui in _get_upgrade_uis():
@@ -116,7 +139,6 @@ func _create_stat_toggle(stat: String) -> Button:
 	btn.expand_icon = true
 	btn.focus_mode = Control.FOCUS_ALL
 	
-	# 注意：不再强行写死尺寸，完全交给 _fit_toggle_grid 动态分配
 	btn.rect_min_size = Vector2(100, 40) 
 	
 	var style = StyleBoxFlat.new()
@@ -125,7 +147,6 @@ func _create_stat_toggle(stat: String) -> Button:
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(8)
 	
-	# 内边距
 	style.content_margin_left = 12
 	style.content_margin_right = 12
 	style.content_margin_top = 6
@@ -171,11 +192,15 @@ func _on_stat_toggled(pressed: bool, stat: String) -> void:
 			_mod_preferences.append(stat)
 	else:
 		_mod_preferences.erase(stat)
+	# 每次点击都保存！
+	_save_preferences()
 	_sync_panel()
 	_schedule_auto_pick()
 
 func _on_clear_pressed() -> void:
 	_mod_preferences.clear()
+	# 清空也保存！
+	_save_preferences()
 	_sync_panel()
 	_schedule_auto_pick()
 
@@ -293,35 +318,24 @@ class ChooseProgress extends ProgressBar:
 			return
 		value = clamp(1.0 - timer.time_left / timer.wait_time, 0.0, 1.0)
 
-# ================= 动态排版核心函数 =================
-
 func _fit_toggle_grid(grid: GridContainer) -> void:
 	var widest = 0.0
-	# 找出最长的文字有多宽
 	for stat in _mod_stat_buttons:
 		widest = max(widest, _toggle_width(_mod_stat_buttons[stat]))
 		
 	if widest <= 0.0 or _mod_stat_buttons.empty():
 		return
 		
-	# 假定的总宽度，你的手机屏幕大概能容纳 1400 左右的像素内容
 	var total_width = 1400.0 
-	
-	# 算出一行能放几个： (总宽 + 间距) / (按钮宽 + 间距)
 	grid.columns = int(clamp(floor((total_width + 8.0) / (widest + 8.0)), 4, 8))
 	
-	# 把所有按钮强制撑成一样宽，高度固定 40
 	for stat in _mod_stat_buttons:
 		_mod_stat_buttons[stat].rect_min_size = Vector2(widest, 40)
 
 func _toggle_width(button: Button) -> float:
 	var font = button.get_font("font")
-	# 防止 get_font 返回 null 导致后面计算直接变成 0
 	if font == null:
 		font = DynamicFont.new()
 		font.size = 16
-		
-	# 算出文字宽度
 	var text_width = font.get_string_size(button.text).x
-	# 加上图标预留宽度 (34) + 角标预留宽度 (30) + 左右边距 (24)
 	return text_width + 34.0 + 30.0 + 24.0
