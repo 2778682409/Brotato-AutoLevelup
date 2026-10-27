@@ -1,0 +1,25 @@
+name: Build Brotato Mod
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Mod Structure
+        run: |
+          mkdir -p build/mods-unpacked/yuan-AutoLevelup
+          cp manifest.json mod_main.gd build/mods-unpacked/yuan-AutoLevelup/
+          cp -r extensions build/mods-unpacked/yuan-AutoLevelup/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoLevelup-Mod
+          path: build/
