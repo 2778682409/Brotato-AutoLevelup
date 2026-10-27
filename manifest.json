@@ -1,0 +1,17 @@
+{
+  "name": "AutoLevelup",
+  "namespace": "yuan",
+  "version_number": "1.0.0",
+  "description": "多属性优先级自动升级，带倒计时打断机制。",
+  "website_url": "",
+  "dependencies": [],
+  "extra": {
+    "godot": {
+      "incompatibilities": [],
+      "authors": ["yuan"],
+      "compatible_mod_loader_version": ["6.0.0"],
+      "compatible_game_version": ["1.1.15.4"],
+      "config_defaults": {}
+    }
+  }
+}
