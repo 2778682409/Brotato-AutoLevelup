@@ -1,7 +1,5 @@
 extends "res://ui/menus/ingame/upgrades_ui_player_container.gd"
-# 加载原版字体
-const FONT_PATH = "res://resources/fonts/actual/base/font_smallest_text.tres"
-var _ui_font = null
+
 # ================= 界面变量 =================
 var _mod_panel: VBoxContainer = null
 var _mod_stat_buttons: Dictionary = {}
@@ -32,9 +30,6 @@ func _ready() -> void:
 func _build_mod_panel() -> void:
 	if _mod_panel != null or _upgrades_container == null:
 		return
-		
-	#  加载字体资源
-	_ui_font = load(FONT_PATH) if ResourceLoader.exists(FONT_PATH) else null
 	
 	_mod_timer = Timer.new()
 	_mod_timer.one_shot = true
@@ -49,7 +44,7 @@ func _build_mod_panel() -> void:
 	_mod_panel = VBoxContainer.new()
 	_mod_panel.name = "ModAutoPickPanel"
 	_mod_panel.size_flags_horizontal = SIZE_EXPAND_FILL
-	_mod_panel.add_constant_override("separation", 8)
+	_mod_panel.add_constant_override("separation", 12) 
 	_upgrades_container.add_child(_mod_panel)
 
 	var header = HBoxContainer.new()
@@ -58,23 +53,29 @@ func _build_mod_panel() -> void:
 	_mod_panel.add_child(header)
 
 	var title = Label.new()
-    title.text = "自动选择属性"
-    title.valign = Label.VALIGN_CENTER
-    title.add_color_override("font_color", Color.white)
-    # 给标题换上原版稍微大一点的字体
-    var title_font = load("res://resources/fonts/actual/base/font_26.tres")
-    if title_font != null:
-	    title.add_font_override("font", title_font)
+	title.text = "自动选择属性"
+	title.valign = Label.VALIGN_CENTER
+	title.add_color_override("font_color", Color.white)
+	
+	# 标题字体也放大
+	var title_font = title.get_font("font")
+	if title_font is DynamicFont:
+		var new_title_font = title_font.duplicate()
+		new_title_font.size = 28
+		title.add_font_override("font", new_title_font)
+		
+	header.add_child(title)
 
 	_mod_clear_button = Button.new()
 	_mod_clear_button.text = "清空"
-	_mod_clear_button.rect_min_size = Vector2(80, 36)
+	_mod_clear_button.rect_min_size = Vector2(80, 36) 
 	_mod_clear_button.connect("pressed", self, "_on_clear_pressed")
 	header.add_child(_mod_clear_button)
 
 	var grid = GridContainer.new()
-	grid.columns = 6
+	grid.columns = 6 
 	grid.size_flags_horizontal = SIZE_SHRINK_CENTER
+	# 💥 拉大按钮之间的间距
 	grid.add_constant_override("hseparation", 16)
 	grid.add_constant_override("vseparation", 16)
 	_mod_panel.add_child(grid)
@@ -119,30 +120,31 @@ func _create_stat_toggle(stat: String) -> Button:
 	btn.text = TranslationServer.translate(stat.to_upper())
 	btn.icon = ItemService.get_stat_small_icon(Keys.generate_hash(stat))
 	
-	#  关键1：让图标自动撑满高度
-	btn.expand_icon = true 
-	
-	#  关键2：强制使用原版字体
-	if _ui_font != null:
-		btn.add_font_override("font", _ui_font)
-	
+	# 💥 关键1：让图标根据按钮高度自动撑开
+	btn.expand_icon = true
 	btn.focus_mode = Control.FOCUS_ALL
 	
-	#  关键3：把高度从 45 加到 50，让原本被缩小的图标变大
+	# 💥 关键2：强制放大字体（直接复制默认字体并修改大小，绝不报错）
+	var default_font = btn.get_font("font")
+	if default_font is DynamicFont:
+		var new_font = default_font.duplicate()
+		new_font.size = 20 # 20 号字体，足够大且不挤
+		btn.add_font_override("font", new_font)
+	
+	# 💥 关键3：设定大按钮尺寸
 	btn.rect_min_size = Vector2(190, 50) 
 	
-	# 样式
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.05, 0.06, 0.09, 0.85)
 	style.border_color = Color(0.35, 0.38, 0.45, 0.9)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(8)
 	
-	# 内部留白
-	style.content_margin_left = 16
-	style.content_margin_right = 16
-	style.content_margin_top = 10
-	style.content_margin_bottom = 10
+	# 内部边距
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
 	
 	btn.add_stylebox_override("normal", style)
 	
@@ -153,9 +155,13 @@ func _create_stat_toggle(stat: String) -> Button:
 	badge.margin_right = -10
 	badge.align = Label.ALIGN_RIGHT
 	badge.visible = false
-	# 角标也用原版字体
-	if _ui_font != null:
-		badge.add_font_override("font", _ui_font)
+	
+	# 角标字体也放大
+	if default_font is DynamicFont:
+		var badge_font = default_font.duplicate()
+		badge_font.size = 20
+		badge.add_font_override("font", badge_font)
+		
 	btn.add_child(badge)
 	_mod_badges[stat] = badge
 
