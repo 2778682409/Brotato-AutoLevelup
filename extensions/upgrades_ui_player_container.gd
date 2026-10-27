@@ -64,21 +64,21 @@ func _build_mod_panel() -> void:
 	_mod_clear_button.connect("pressed", self, "_on_clear_pressed")
 	header.add_child(_mod_clear_button)
 
-	# 4. 属性九宫格
-var grid = GridContainer.new()
-grid.size_flags_horizontal = SIZE_SHRINK_CENTER
-grid.add_constant_override("hseparation", 8)
-grid.add_constant_override("vseparation", 8)
-_mod_panel.add_child(grid)
+	# ================= 动态九宫格 =================
+	var grid = GridContainer.new()
+	grid.size_flags_horizontal = SIZE_SHRINK_CENTER
+	grid.add_constant_override("hseparation", 8)
+	grid.add_constant_override("vseparation", 8)
+	_mod_panel.add_child(grid)
 
-var available_stats = _get_available_stats()
-for stat in available_stats:
-	var btn = _create_stat_toggle(stat)
-	grid.add_child(btn)
-	_mod_stat_buttons[stat] = btn
+	var available_stats = _get_available_stats()
+	for stat in available_stats:
+		var btn = _create_stat_toggle(stat)
+		grid.add_child(btn)
+		_mod_stat_buttons[stat] = btn
 
-# 💥 新增：动态计算列数和按钮宽度！
-_fit_toggle_grid(grid)
+	# 💥 核心：动态计算列数和按钮宽度
+	_fit_toggle_grid(grid)
 
 	for upgrade_ui in _get_upgrade_uis():
 		var fill = ChooseProgress.new()
@@ -116,17 +116,16 @@ func _create_stat_toggle(stat: String) -> Button:
 	btn.expand_icon = true
 	btn.focus_mode = Control.FOCUS_ALL
 	
-	#  增加按钮的最小高度和宽度，让它看起来更大气
-	btn.rect_min_size = Vector2(180, 45) 
+	# 注意：不再强行写死尺寸，完全交给 _fit_toggle_grid 动态分配
+	btn.rect_min_size = Vector2(100, 40) 
 	
-	# 样式
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.05, 0.06, 0.09, 0.85)
 	style.border_color = Color(0.35, 0.38, 0.45, 0.9)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(8)
 	
-	#  核心：增加按钮内部的内边距，让它不挤
+	# 内边距
 	style.content_margin_left = 12
 	style.content_margin_right = 12
 	style.content_margin_top = 6
@@ -293,7 +292,9 @@ class ChooseProgress extends ProgressBar:
 		if not visible or timer == null or timer.is_stopped() or timer.wait_time <= 0.0:
 			return
 		value = clamp(1.0 - timer.time_left / timer.wait_time, 0.0, 1.0)
-# 动态排版核心函数
+
+# ================= 动态排版核心函数 =================
+
 func _fit_toggle_grid(grid: GridContainer) -> void:
 	var widest = 0.0
 	# 找出最长的文字有多宽
@@ -303,7 +304,7 @@ func _fit_toggle_grid(grid: GridContainer) -> void:
 	if widest <= 0.0 or _mod_stat_buttons.empty():
 		return
 		
-	# 假定的总宽度，你的手机屏幕大概能容纳 1400 左右的像素内容（如果发现放不下，把 1400 改成 1200）
+	# 假定的总宽度，你的手机屏幕大概能容纳 1400 左右的像素内容
 	var total_width = 1400.0 
 	
 	# 算出一行能放几个： (总宽 + 间距) / (按钮宽 + 间距)
@@ -315,7 +316,12 @@ func _fit_toggle_grid(grid: GridContainer) -> void:
 
 func _toggle_width(button: Button) -> float:
 	var font = button.get_font("font")
+	# 防止 get_font 返回 null 导致后面计算直接变成 0
+	if font == null:
+		font = DynamicFont.new()
+		font.size = 16
+		
 	# 算出文字宽度
-	var text_width = font.get_string_size(button.text).x if font != null else 0.0
+	var text_width = font.get_string_size(button.text).x
 	# 加上图标预留宽度 (34) + 角标预留宽度 (30) + 左右边距 (24)
 	return text_width + 34.0 + 30.0 + 24.0
