@@ -146,26 +146,55 @@ func _create_stat_toggle(stat: String) -> Button:
 	style.border_color = Color(0.35, 0.38, 0.45, 0.9)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(8)
-	
 	style.content_margin_left = 12
 	style.content_margin_right = 12
 	style.content_margin_top = 6
 	style.content_margin_bottom = 6
-	
 	btn.add_stylebox_override("normal", style)
 	
+	# 放大主文字
+	var default_font = btn.get_font("font")
+	if default_font is DynamicFont:
+		var new_font = default_font.duplicate()
+		new_font.size = 20 
+		btn.add_font_override("font", new_font)
+	
+	# ================= 海克斯同款：精准对齐角标 =================
 	var badge = Label.new()
 	badge.anchor_left = 1.0
 	badge.anchor_right = 1.0
-	badge.margin_left = -30
-	badge.margin_right = -10
-	badge.align = Label.ALIGN_RIGHT
+	badge.anchor_top = 0.0
+	badge.anchor_bottom = 1.0
+	badge.margin_left = -30  # 给数字留出 30 宽度的位置
+	badge.margin_right = -8  # 距离最右边留 8 像素
+	badge.align = Label.ALIGN_RIGHT # 右对齐
+	badge.valign = Label.VALIGN_CENTER # 垂直居中 (核心修复)
 	badge.visible = false
+	
+	# 角标字体也放大到 20
+	if default_font is DynamicFont:
+		var badge_font = default_font.duplicate()
+		badge_font.size = 20
+		badge.add_font_override("font", badge_font)
+		
+	# 用金色让它更显眼（可选）
+	badge.add_color_override("font_color", Color(1.0, 0.8, 0.2)) 
+	
 	btn.add_child(badge)
 	_mod_badges[stat] = badge
 
 	btn.connect("toggled", self, "_on_stat_toggled", [stat])
 	return btn
+
+# 动态计算宽度时，加上角标的专属空间
+func _toggle_width(button: Button) -> float:
+	var font = button.get_font("font")
+	if font == null:
+		font = DynamicFont.new()
+		font.size = 16
+	var text_width = font.get_string_size(button.text).x
+	# 💥 加上图标的 34 + 角标的 30 + 左右边距的 24
+	return text_width + 34.0 + 30.0 + 24.0
 
 func show_upgrades_for_level(level: int) -> void:
 	.show_upgrades_for_level(level)
