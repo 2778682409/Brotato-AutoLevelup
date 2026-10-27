@@ -67,8 +67,8 @@ func _build_mod_panel() -> void:
 	var grid = GridContainer.new()
 	grid.columns = 6
 	grid.size_flags_horizontal = SIZE_SHRINK_CENTER
-	grid.add_constant_override("hseparation", 8)
-	grid.add_constant_override("vseparation", 8)
+	grid.add_constant_override("hseparation", 16)
+	grid.add_constant_override("vseparation", 16)
 	_mod_panel.add_child(grid)
 
 	var available_stats = _get_available_stats()
@@ -113,11 +113,22 @@ func _create_stat_toggle(stat: String) -> Button:
 	btn.expand_icon = true
 	btn.focus_mode = Control.FOCUS_ALL
 	
+	#  增加按钮的最小高度和宽度，让它看起来更大气
+	btn.rect_min_size = Vector2(180, 45) 
+	
+	# 样式
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color(0.05, 0.06, 0.09, 0.85)
 	style.border_color = Color(0.35, 0.38, 0.45, 0.9)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(8)
+	
+	#  核心：增加按钮内部的内边距，让它不挤
+	style.content_margin_left = 16
+	style.content_margin_right = 16
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	
 	btn.add_stylebox_override("normal", style)
 	
 	var badge = Label.new()
